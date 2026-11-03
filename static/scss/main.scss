@@ -121,6 +121,10 @@ input[type="radio"] {
   display: block;
   margin-bottom: 26px;
   color: #dce5dc;
+
+  &[hidden] {
+    display: none;
+  }
 }
 
 input[type="text"],
