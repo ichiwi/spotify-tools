@@ -1,4 +1,4 @@
-# Spotify Duplicate Finder
+# Spotify Organizer
 
 A small Flask website that signs in with Spotify and lists duplicate songs in
 liked songs or a playlist, or finds liked songs that are missing from every
