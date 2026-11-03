@@ -3,8 +3,8 @@
   <p class="eyebrow">Spotify tools</p>
   <h1>Spotify Organizer</h1>
   <p class="intro">
-    Find duplicates across releases and discover liked songs that are not in
-    any of your owned playlists.
+    Find duplicates across releases and discover liked songs that are not in any
+    of your owned playlists.
   </p>
   {% with messages = get_flashed_messages(with_categories=true) %} {% for
   category, message in messages %}
@@ -20,12 +20,12 @@
     <fieldset>
       <legend>What should I check?</legend>
       <label class="choice"
-        ><input type="radio" name="source" value="all_playlists" />
+        ><input type="radio" name="source" value="all_playlists" checked />
         Uncategorized liked songs</label
       >
       <label class="choice"
-        ><input type="radio" name="source" value="liked" checked /> Duplicates
-        across all liked songs</label
+        ><input type="radio" name="source" value="liked" /> Duplicates across
+        all liked songs</label
       >
       <label class="choice"
         ><input type="radio" name="source" value="owned_duplicates" />
