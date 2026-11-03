@@ -6,7 +6,35 @@
     <main class="card wide">
       <a class="back" href="{{ url_for('index') }}">← New scan</a>
       <p class="eyebrow">{{ source_name }}</p>
-      {% if missing is defined %}
+      {% if repeated is defined %}
+      <h1>Songs repeated across playlists</h1>
+      <p class="intro">
+        {{ repeated|length }} songs appear in more than one of your owned
+        playlists.
+      </p>
+      {% if repeated %}
+      <div class="results">
+        {% for item in repeated %}
+        <section class="duplicate">
+          <h2>{{ item.track.name }}</h2>
+          <p class="artist">{{ item.track.artist }} · {{ item.track.album }}</p>
+          <p class="hint">Found in: {{ item.playlists|join(", ") }}</p>
+          {% if item.track.url %}<a
+            href="{{ item.track.url }}"
+            target="_blank"
+            rel="noreferrer"
+            >Open in Spotify</a
+          >{% endif %}
+        </section>
+        {% endfor %}
+      </div>
+      {% else %}
+      <div class="empty">
+        <strong>No repeated songs found.</strong><br />No song appears in more
+        than one owned playlist.
+      </div>
+      {% endif %}
+      {% elif missing is defined %}
       <h1>Uncategorized liked songs</h1>
       <p class="intro">
         {{ missing|length }} of {{ track_count }} liked songs are not in any of
@@ -65,6 +93,7 @@
         <strong>No duplicates found.</strong><br />Every song had a unique title
         for its artist.
       </div>
-      {% endif %} {% endif %}
+      {% endif %}
+      {% endif %}
     </main>
 {% endblock %}

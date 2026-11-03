@@ -1,9 +1,9 @@
 # Spotify Organizer
 
 A small Flask website that signs in with Spotify and lists duplicate songs in
-liked songs or a playlist, finds duplicates across all owned playlists, or
-finds uncategorized liked songs. A duplicate requires the same artist and the
-same underlying title.
+liked songs or a playlist, finds duplicates across all owned playlists, shows
+songs repeated across multiple owned playlists, or finds uncategorized liked
+songs. A duplicate requires the same artist and the same underlying title.
 Known release markers are ignored, so `Song`, `Song -
 Remastered 2011`, and `Song (Deluxe Edition)` are grouped, while `Song 2` and
 tracks by different artists are not.
