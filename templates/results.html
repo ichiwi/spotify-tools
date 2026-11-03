@@ -6,7 +6,34 @@
     <main class="card wide">
       <a class="back" href="{{ url_for('index') }}">← New scan</a>
       <p class="eyebrow">{{ source_name }}</p>
-      {% if repeated is defined %}
+      {% if unliked is defined %}
+      <h1>Playlist songs not in liked songs</h1>
+      <p class="intro">
+        {{ unliked|length }} of {{ track_count }} playlist songs are not in
+        your liked songs.
+      </p>
+      {% if unliked %}
+      <div class="results">
+        {% for track in unliked %}
+        <section class="duplicate">
+          <h2>{{ track.name }}</h2>
+          <p class="artist">{{ track.artist }} · {{ track.album }}</p>
+          {% if track.url %}<a
+            href="{{ track.url }}"
+            target="_blank"
+            rel="noreferrer"
+            >Open in Spotify</a
+          >{% endif %}
+        </section>
+        {% endfor %}
+      </div>
+      {% else %}
+      <div class="empty">
+        <strong>Everything is liked.</strong><br />Every song in this playlist
+        is also in your liked songs.
+      </div>
+      {% endif %}
+      {% elif repeated is defined %}
       <h1>Songs repeated across playlists</h1>
       <p class="intro">
         {{ repeated|length }} songs appear in more than one of your owned

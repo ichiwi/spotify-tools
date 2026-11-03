@@ -180,6 +180,11 @@ def find_unfiled_tracks(liked_tracks, playlist_tracks):
     return [track for track in liked_tracks if track_key(track) not in playlist_keys]
 
 
+def find_unliked_tracks(playlist_tracks, liked_tracks):
+    liked_keys = {track_key(track) for track in liked_tracks}
+    return [track for track in playlist_tracks if track_key(track) not in liked_keys]
+
+
 def find_repeated_playlist_songs(playlist_tracks):
     songs = {}
     for playlist_name, track in playlist_tracks:
@@ -267,10 +272,13 @@ def scan():
         "all_playlists",
         "owned_duplicates",
         "owned_repeated",
+        "playlist_unliked",
     }:
         flash("Choose liked songs or enter a playlist ID.", "error")
         return redirect(url_for("index"))
-    if source == "playlist" and not re.fullmatch(r"[A-Za-z0-9]+", playlist_id):
+    if source in {"playlist", "playlist_unliked"} and not re.fullmatch(
+        r"[A-Za-z0-9]+", playlist_id
+    ):
         flash("Choose a valid playlist ID.", "error")
         return redirect(url_for("index"))
     job_id = secrets.token_urlsafe(18)
@@ -354,9 +362,13 @@ def run_scan(job_id, source, playlist_id, access_token):
         else:
             endpoint = "/me/tracks?limit=50"
             source_name = "Liked songs"
-            if source == "playlist":
+            if source in {"playlist", "playlist_unliked"}:
                 endpoint = f"/playlists/{playlist_id}/items?limit=50&fields=items(track(name,artists,album,external_urls,type)),next"
-                source_name = f"Playlist {playlist_id}"
+                source_name = (
+                    f"Songs in playlist {playlist_id} not in liked songs"
+                    if source == "playlist_unliked"
+                    else f"Playlist {playlist_id}"
+                )
             update_scan(job_id, "Loading songs from Spotify…")
             items = fetch_all_pages(
                 endpoint,
@@ -365,11 +377,26 @@ def run_scan(job_id, source, playlist_id, access_token):
             )
             tracks = [track for item in items if (track := track_from_item(item))]
             update_scan(job_id, "Comparing song titles and artists…")
-            result = {
-                "duplicates": find_duplicates(tracks),
-                "source_name": source_name,
-                "track_count": len(tracks),
-            }
+            if source == "playlist_unliked":
+                update_scan(job_id, "Loading liked songs…")
+                liked_items = fetch_all_pages(
+                    "/me/tracks?limit=50",
+                    access_token,
+                    lambda count: update_scan(job_id, f"Loading liked songs ({count} loaded)…"),
+                )
+                liked_tracks = [track for item in liked_items if (track := track_from_item(item))]
+                update_scan(job_id, "Comparing playlist songs with liked songs…")
+                result = {
+                    "unliked": find_unliked_tracks(tracks, liked_tracks),
+                    "source_name": source_name,
+                    "track_count": len(tracks),
+                }
+            else:
+                result = {
+                    "duplicates": find_duplicates(tracks),
+                    "source_name": source_name,
+                    "track_count": len(tracks),
+                }
         with SCAN_JOBS_LOCK:
             SCAN_JOBS[job_id].update(status="complete", message="Check complete.", result=result)
     except (KeyError, RuntimeError) as error:

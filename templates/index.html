@@ -39,6 +39,10 @@
         ><input type="radio" name="source" value="playlist" /> Duplicates across
         a specific playlist</label
       >
+      <label class="choice"
+        ><input type="radio" name="source" value="playlist_unliked" /> Songs in
+        a specific playlist not in liked songs</label
+      >
     </fieldset>
     <label id="playlist-label" class="playlist-field" hidden
       >Playlist ID
@@ -68,15 +72,17 @@
   {% endif %}
 </main>
 <script>
-  const playlist = document.querySelector('input[value="playlist"]');
+  const playlistOptions = document.querySelectorAll(
+    'input[value="playlist"], input[value="playlist_unliked"]',
+  );
   const field = document.querySelector("#playlist-label");
   const input = document.querySelector("#playlist-id");
   function updatePlaylistField() {
-    const enabled = playlist && playlist.checked;
+    const enabled = Array.from(playlistOptions).some((option) => option.checked);
     field.hidden = !enabled;
     input.required = enabled;
   }
-  if (playlist) {
+  if (playlistOptions.length) {
     document
       .querySelectorAll('input[name="source"]')
       .forEach((radio) =>
