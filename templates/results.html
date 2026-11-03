@@ -7,10 +7,10 @@
       <a class="back" href="{{ url_for('index') }}">← New scan</a>
       <p class="eyebrow">{{ source_name }}</p>
       {% if unliked is defined %}
-      <h1>Playlist songs not in liked songs</h1>
+      <h1>Owned playlist songs not in liked songs</h1>
       <p class="intro">
-        {{ unliked|length }} of {{ track_count }} playlist songs are not in
-        your liked songs.
+        {{ unliked|length }} of {{ track_count }} songs across your {{
+        playlist_count }} owned playlists are not in your liked songs.
       </p>
       {% if unliked %}
       <div class="results">
@@ -29,8 +29,8 @@
       </div>
       {% else %}
       <div class="empty">
-        <strong>Everything is liked.</strong><br />Every song in this playlist
-        is also in your liked songs.
+        <strong>Everything is liked.</strong><br />Every song in your owned
+        playlists is also in your liked songs.
       </div>
       {% endif %}
       {% elif repeated is defined %}

@@ -40,8 +40,8 @@
         a specific playlist</label
       >
       <label class="choice"
-        ><input type="radio" name="source" value="playlist_unliked" /> Songs in
-        a specific playlist not in liked songs</label
+        ><input type="radio" name="source" value="owned_unliked" /> Songs across
+        owned playlists not in liked songs</label
       >
     </fieldset>
     <label id="playlist-label" class="playlist-field" hidden
@@ -73,7 +73,7 @@
 </main>
 <script>
   const playlistOptions = document.querySelectorAll(
-    'input[value="playlist"], input[value="playlist_unliked"]',
+    'input[value="playlist"]',
   );
   const field = document.querySelector("#playlist-label");
   const input = document.querySelector("#playlist-id");

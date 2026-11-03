@@ -272,11 +272,11 @@ def scan():
         "all_playlists",
         "owned_duplicates",
         "owned_repeated",
-        "playlist_unliked",
+        "owned_unliked",
     }:
         flash("Choose liked songs or enter a playlist ID.", "error")
         return redirect(url_for("index"))
-    if source in {"playlist", "playlist_unliked"} and not re.fullmatch(
+    if source == "playlist" and not re.fullmatch(
         r"[A-Za-z0-9]+", playlist_id
     ):
         flash("Choose a valid playlist ID.", "error")
@@ -304,7 +304,12 @@ def update_scan(job_id, message):
 
 def run_scan(job_id, source, playlist_id, access_token):
     try:
-        if source in {"all_playlists", "owned_duplicates", "owned_repeated"}:
+        if source in {
+            "all_playlists",
+            "owned_duplicates",
+            "owned_repeated",
+            "owned_unliked",
+        }:
             update_scan(job_id, "Loading your Spotify profile…")
             user = spotify_request("/me", access_token=access_token)
             update_scan(job_id, "Loading your playlists…")
@@ -345,6 +350,20 @@ def run_scan(job_id, source, playlist_id, access_token):
                     "source_name": "Songs repeated across your owned playlists",
                     "track_count": len(playlist_tracks),
                 }
+            elif source == "owned_unliked":
+                update_scan(job_id, "Loading liked songs…")
+                liked_items = fetch_all_pages(
+                    "/me/tracks?limit=50",
+                    access_token,
+                    lambda count: update_scan(job_id, f"Loading liked songs ({count} loaded)…"),
+                )
+                liked_tracks = [track for item in liked_items if (track := track_from_item(item))]
+                result = {
+                    "unliked": find_unliked_tracks(playlist_tracks, liked_tracks),
+                    "playlist_count": total,
+                    "source_name": "Owned playlist songs not in liked songs",
+                    "track_count": len(playlist_tracks),
+                }
             else:
                 update_scan(job_id, "Loading liked songs…")
                 liked_items = fetch_all_pages(
@@ -362,13 +381,9 @@ def run_scan(job_id, source, playlist_id, access_token):
         else:
             endpoint = "/me/tracks?limit=50"
             source_name = "Liked songs"
-            if source in {"playlist", "playlist_unliked"}:
+            if source == "playlist":
                 endpoint = f"/playlists/{playlist_id}/items?limit=50&fields=items(track(name,artists,album,external_urls,type)),next"
-                source_name = (
-                    f"Songs in playlist {playlist_id} not in liked songs"
-                    if source == "playlist_unliked"
-                    else f"Playlist {playlist_id}"
-                )
+                source_name = f"Playlist {playlist_id}"
             update_scan(job_id, "Loading songs from Spotify…")
             items = fetch_all_pages(
                 endpoint,
@@ -377,26 +392,11 @@ def run_scan(job_id, source, playlist_id, access_token):
             )
             tracks = [track for item in items if (track := track_from_item(item))]
             update_scan(job_id, "Comparing song titles and artists…")
-            if source == "playlist_unliked":
-                update_scan(job_id, "Loading liked songs…")
-                liked_items = fetch_all_pages(
-                    "/me/tracks?limit=50",
-                    access_token,
-                    lambda count: update_scan(job_id, f"Loading liked songs ({count} loaded)…"),
-                )
-                liked_tracks = [track for item in liked_items if (track := track_from_item(item))]
-                update_scan(job_id, "Comparing playlist songs with liked songs…")
-                result = {
-                    "unliked": find_unliked_tracks(tracks, liked_tracks),
-                    "source_name": source_name,
-                    "track_count": len(tracks),
-                }
-            else:
-                result = {
-                    "duplicates": find_duplicates(tracks),
-                    "source_name": source_name,
-                    "track_count": len(tracks),
-                }
+            result = {
+                "duplicates": find_duplicates(tracks),
+                "source_name": source_name,
+                "track_count": len(tracks),
+            }
         with SCAN_JOBS_LOCK:
             SCAN_JOBS[job_id].update(status="complete", message="Check complete.", result=result)
     except (KeyError, RuntimeError) as error:
