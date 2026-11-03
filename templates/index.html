@@ -26,10 +26,6 @@
             songs</label
           >
           <label class="choice"
-            ><input type="radio" name="source" value="playlist" /> A specific
-            playlist</label
-          >
-          <label class="choice"
             ><input type="radio" name="source" value="all_playlists" />
             Uncategorized liked songs</label
           >
@@ -37,8 +33,12 @@
             ><input type="radio" name="source" value="owned_duplicates" />
             Duplicates across all owned playlists</label
           >
+          <label class="choice"
+            ><input type="radio" name="source" value="playlist" /> A specific
+            playlist</label
+          >
         </fieldset>
-        <label id="playlist-label" class="playlist-field"
+        <label id="playlist-label" class="playlist-field" hidden
           >Playlist ID
           <input
             name="playlist_id"
