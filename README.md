@@ -27,4 +27,6 @@ The app requests only read scopes (`user-library-read`,
 `playlist-read-private`, and `playlist-read-collaborative`). It uses Spotify's
 documented `GET /me/tracks` endpoint for saved tracks and
 `GET /playlists/{playlist_id}/items` for playlist items. The all-playlists
-check also uses `GET /me/playlists` and compares every playlist's tracks.
+check uses `GET /me` to identify the signed-in user, then compares tracks only
+from playlists whose owner is that user. Followed and other users' playlists
+are excluded.

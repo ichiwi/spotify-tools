@@ -36,7 +36,7 @@ def login_required(view):
     return wrapped
 
 
-def spotify_request(path_or_url, method="GET", access_token=None, **kwargs):
+def spotify_request_legacy(path_or_url, method="GET", access_token=None, **kwargs):
     url = path_or_url if path_or_url.startswith("http") else f"{SPOTIFY_API_URL}{path_or_url}"
     headers = kwargs.pop("headers", {})
     headers["Authorization"] = f"Bearer {session['access_token']}"
@@ -283,7 +283,14 @@ def run_scan(job_id, source, playlist_id, access_token):
             )
             liked_tracks = [track for item in liked_items if (track := track_from_item(item))]
             update_scan(job_id, "Loading your playlists…")
-            playlists = fetch_all_pages("/me/playlists?limit=50", access_token)
+            user = spotify_request("/me", access_token=access_token)
+            all_playlists = fetch_all_pages("/me/playlists?limit=50", access_token)
+            playlists = [
+                playlist
+                for playlist in all_playlists
+                if (playlist.get("owner") or {}).get("id") == user.get("id")
+            ]
+            update_scan(job_id, f"Found {len(playlists)} playlists owned by you.")
             playlist_tracks = []
             total = len(playlists)
             for index, playlist in enumerate(playlists, 1):
