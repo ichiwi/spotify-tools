@@ -7,7 +7,7 @@
       <a class="back" href="{{ url_for('index') }}">← New scan</a>
       <p class="eyebrow">{{ source_name }}</p>
       {% if missing is defined %}
-      <h1>Missing from playlists</h1>
+      <h1>Uncategorized liked songs</h1>
       <p class="intro">
         {{ missing|length }} of {{ track_count }} liked songs are not in any of
         your {{ playlist_count }} personally owned playlists.

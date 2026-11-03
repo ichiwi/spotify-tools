@@ -245,7 +245,7 @@ def logout():
 def scan():
     source = request.form.get("source")
     playlist_id = request.form.get("playlist_id", "").strip()
-    if source not in {"liked", "playlist", "all_playlists"}:
+    if source not in {"liked", "playlist", "all_playlists", "owned_duplicates"}:
         flash("Choose liked songs or enter a playlist ID.", "error")
         return redirect(url_for("index"))
     if source == "playlist" and not re.fullmatch(r"[A-Za-z0-9]+", playlist_id):
@@ -274,16 +274,10 @@ def update_scan(job_id, message):
 
 def run_scan(job_id, source, playlist_id, access_token):
     try:
-        if source == "all_playlists":
-            update_scan(job_id, "Loading liked songs…")
-            liked_items = fetch_all_pages(
-                "/me/tracks?limit=50",
-                access_token,
-                lambda count: update_scan(job_id, f"Loading liked songs ({count} loaded)…"),
-            )
-            liked_tracks = [track for item in liked_items if (track := track_from_item(item))]
-            update_scan(job_id, "Loading your playlists…")
+        if source in {"all_playlists", "owned_duplicates"}:
+            update_scan(job_id, "Loading your Spotify profile…")
             user = spotify_request("/me", access_token=access_token)
+            update_scan(job_id, "Loading your playlists…")
             all_playlists = fetch_all_pages("/me/playlists?limit=50", access_token)
             playlists = [
                 playlist
@@ -303,13 +297,27 @@ def run_scan(job_id, source, playlist_id, access_token):
                     )
                     if (track := track_from_item(item))
                 )
-            update_scan(job_id, "Comparing liked songs with playlist tracks…")
-            result = {
-                "missing": find_unfiled_tracks(liked_tracks, playlist_tracks),
-                "playlist_count": total,
-                "source_name": "Liked songs not in your playlists",
-                "track_count": len(liked_tracks),
-            }
+            update_scan(job_id, "Comparing song titles and artists…")
+            if source == "owned_duplicates":
+                result = {
+                    "duplicates": find_duplicates(playlist_tracks),
+                    "source_name": "Duplicates across your owned playlists",
+                    "track_count": len(playlist_tracks),
+                }
+            else:
+                update_scan(job_id, "Loading liked songs…")
+                liked_items = fetch_all_pages(
+                    "/me/tracks?limit=50",
+                    access_token,
+                    lambda count: update_scan(job_id, f"Loading liked songs ({count} loaded)…"),
+                )
+                liked_tracks = [track for item in liked_items if (track := track_from_item(item))]
+                result = {
+                    "missing": find_unfiled_tracks(liked_tracks, playlist_tracks),
+                    "playlist_count": total,
+                    "source_name": "Uncategorized liked songs",
+                    "track_count": len(liked_tracks),
+                }
         else:
             endpoint = "/me/tracks?limit=50"
             source_name = "Liked songs"
