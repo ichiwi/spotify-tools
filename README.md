@@ -24,12 +24,15 @@ tracks by different artists are not.
 4. Open `http://127.0.0.1:5000`.
 
 The source stylesheet is [static/style.scss](static/style.scss). Compile it to
-`static/style.css` with your installed Sass compiler after making style
+`static/css/style.css` with your installed Sass compiler after making style
 changes, for example:
 
 ```text
-sass static/style.scss static/style.css
+sass static/style.scss static/css/style.css
 ```
+
+Generated CSS files are excluded from Git; compile the stylesheet locally
+before running the website.
 
 The app requests only read scopes (`user-library-read`,
 `playlist-read-private`, and `playlist-read-collaborative`). It uses Spotify's

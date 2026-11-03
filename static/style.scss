@@ -10,7 +10,7 @@ $colors: (
   border: #303830,
   input-border: #4a554b,
   error-background: #492727,
-  error-text: #ffb6b6
+  error-text: #ffb6b6,
 );
 
 @function color($name) {
@@ -49,9 +49,9 @@ body {
 
 .eyebrow {
   color: color(accent);
-  font-size: .75rem;
+  font-size: 0.75rem;
   font-weight: 700;
-  letter-spacing: .12em;
+  letter-spacing: 0.12em;
   text-transform: uppercase;
 }
 
@@ -80,14 +80,14 @@ h1 {
 
   &:disabled {
     cursor: wait;
-    opacity: .65;
+    opacity: 0.65;
   }
 }
 
 .hint,
 small {
   color: color(text-subtle);
-  font-size: .85rem;
+  font-size: 0.85rem;
 }
 
 code {
@@ -162,7 +162,7 @@ input:not([type]) {
   border: 2px solid #49634d;
   border-top-color: color(accent);
   border-radius: 50%;
-  animation: spin .8s linear infinite;
+  animation: spin 0.8s linear infinite;
 }
 
 @keyframes spin {
@@ -176,7 +176,7 @@ input:not([type]) {
   display: block;
   margin-top: 24px;
   color: #9baa9c;
-  font-size: .9rem;
+  font-size: 0.9rem;
 }
 
 .back {
@@ -195,7 +195,7 @@ input:not([type]) {
     span {
       float: right;
       color: color(accent);
-      font-size: .8rem;
+      font-size: 0.8rem;
       font-weight: 600;
     }
   }
