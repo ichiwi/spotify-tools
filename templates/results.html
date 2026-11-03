@@ -16,10 +16,11 @@
       <div class="results">
         {% for track in unliked %}
         <section class="duplicate">
-          <h2>{{ track.name }}</h2>
-          <p class="artist">{{ track.artist }} · {{ track.album }}</p>
-          {% if track.url %}<a
-            href="{{ track.url }}"
+          <h2>{{ track.track.name }}</h2>
+          <p class="artist">{{ track.track.artist }} · {{ track.track.album }}</p>
+          <p class="hint">Found in: {{ track.playlists|join(", ") }}</p>
+          {% if track.track.url %}<a
+            href="{{ track.track.url }}"
             target="_blank"
             rel="noreferrer"
             >Open in Spotify</a

@@ -185,6 +185,21 @@ def find_unliked_tracks(playlist_tracks, liked_tracks):
     return [track for track in playlist_tracks if track_key(track) not in liked_keys]
 
 
+def find_unliked_playlist_songs(playlist_track_entries, liked_tracks):
+    liked_keys = {track_key(track) for track in liked_tracks}
+    songs = {}
+    for playlist_name, track in playlist_track_entries:
+        if track_key(track) in liked_keys:
+            continue
+        key = track_key(track)
+        song = songs.setdefault(key, {"track": track, "playlists": set()})
+        song["playlists"].add(playlist_name)
+    return [
+        {"track": song["track"], "playlists": sorted(song["playlists"])}
+        for song in songs.values()
+    ]
+
+
 def find_repeated_playlist_songs(playlist_tracks):
     songs = {}
     for playlist_name, track in playlist_tracks:
@@ -359,7 +374,10 @@ def run_scan(job_id, source, playlist_id, access_token):
                 )
                 liked_tracks = [track for item in liked_items if (track := track_from_item(item))]
                 result = {
-                    "unliked": find_unliked_tracks(playlist_tracks, liked_tracks),
+                    "unliked": find_unliked_playlist_songs(
+                        playlist_track_entries,
+                        liked_tracks,
+                    ),
                     "playlist_count": total,
                     "source_name": "Owned playlist songs not in liked songs",
                     "track_count": len(playlist_tracks),
