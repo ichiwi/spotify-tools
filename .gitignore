@@ -1,36 +1,27 @@
-# Prerequisites
-*.d
-
-# Compiled Object files
-*.slo
-*.lo
-*.o
-*.obj
-
-# Precompiled Headers
-*.gch
-*.pch
-
-# Compiled Dynamic libraries
-*.so
-*.dylib
-*.dll
-
-# Fortran module files
-*.mod
-*.smod
-
-# Compiled Static libraries
-*.lai
-*.la
-*.a
-*.lib
-
-# Executables
-*.exe
-*.out
-*.app
+# Environment and local configuration
 .env
+
+# Python
 __pycache__/
+*.py[cod]
 .venv/
+
+# Generated frontend assets
 *.css
+
+# Testing and coverage
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Sass
+.sass-cache/
+
+# Build output and logs
+build/
+dist/
+*.log
+
+# Operating system files
+.DS_Store
+Thumbs.db
