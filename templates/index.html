@@ -1,138 +1,134 @@
-{% extends "base.html" %}
+{% extends "base.html" %} {% block content %}
+<main class="card">
+  <p class="eyebrow">Spotify tools</p>
+  <h1>Spotify Organizer</h1>
+  <p class="intro">
+    Find the same song across remasters, editions, mixes, and other releases.
+  </p>
+  {% with messages = get_flashed_messages(with_categories=true) %} {% for
+  category, message in messages %}
+  <p class="message {{ category }}">{{ message }}</p>
+  {% endfor %} {% endwith %} {% if not logged_in %}
+  <a class="button" href="{{ url_for('login') }}">Connect Spotify</a>
+  <p class="hint">
+    Your credentials stay on this server and are loaded from
+    <code>.env</code>.
+  </p>
+  {% else %}
+  <form id="scan-form" method="post" action="{{ url_for('scan') }}">
+    <fieldset>
+      <legend>What should I check?</legend>
+      <label class="choice"
+        ><input type="radio" name="source" value="liked" checked /> Duplicates
+        across all liked songs</label
+      >
+      <label class="choice"
+        ><input type="radio" name="source" value="owned_duplicates" />
+        Duplicates across all owned playlists</label
+      >
+      <label class="choice"
+        ><input type="radio" name="source" value="all_playlists" />
+        Uncategorized liked songs</label
+      >
+      <label class="choice"
+        ><input type="radio" name="source" value="playlist" /> A specific
+        playlist</label
+      >
+    </fieldset>
+    <label id="playlist-label" class="playlist-field" hidden
+      >Playlist ID
+      <input
+        name="playlist_id"
+        id="playlist-id"
+        placeholder="e.g. 37i9dQZF1DX..."
+        autocomplete="off"
+      />
+      <span class="hint"
+        >Use the ID after <code>playlist/</code> in its Spotify URL.</span
+      >
+    </label>
+    <button id="scan-button" class="button" type="submit">Run check</button>
+    <p
+      id="loading-message"
+      class="loading-message"
+      role="status"
+      aria-live="polite"
+      hidden
+    >
+      <span class="spinner" aria-hidden="true"></span>
+      <span id="loading-text">Starting Spotify check…</span>
+    </p>
+  </form>
+  <a class="logout" href="{{ url_for('logout') }}">Disconnect</a>
+  {% endif %}
+</main>
+<script>
+  const playlist = document.querySelector('input[value="playlist"]');
+  const field = document.querySelector("#playlist-label");
+  const input = document.querySelector("#playlist-id");
+  function updatePlaylistField() {
+    const enabled = playlist && playlist.checked;
+    field.hidden = !enabled;
+    input.required = enabled;
+  }
+  if (playlist) {
+    document
+      .querySelectorAll('input[name="source"]')
+      .forEach((radio) =>
+        radio.addEventListener("change", updatePlaylistField),
+      );
+    updatePlaylistField();
+  }
 
-{% block content %}
-    <main class="card">
-      <p class="eyebrow">Spotify tools</p>
-      <h1>Spotify Organizer</h1>
-      <p class="intro">
-        Find the same song across remasters, editions, mixes, and other
-        releases.
-      </p>
-      {% with messages = get_flashed_messages(with_categories=true) %} {% for
-      category, message in messages %}
-      <p class="message {{ category }}">{{ message }}</p>
-      {% endfor %} {% endwith %} {% if not logged_in %}
-      <a class="button" href="{{ url_for('login') }}">Connect Spotify</a>
-      <p class="hint">
-        Your credentials stay on this server and are loaded from
-        <code>.env</code>.
-      </p>
-      {% else %}
-      <form id="scan-form" method="post" action="{{ url_for('scan') }}">
-        <fieldset>
-          <legend>What should I check?</legend>
-          <label class="choice"
-            ><input type="radio" name="source" value="liked" checked /> Liked
-            songs</label
-          >
-          <label class="choice"
-            ><input type="radio" name="source" value="all_playlists" />
-            Uncategorized liked songs</label
-          >
-          <label class="choice"
-            ><input type="radio" name="source" value="owned_duplicates" />
-            Duplicates across all owned playlists</label
-          >
-          <label class="choice"
-            ><input type="radio" name="source" value="playlist" /> A specific
-            playlist</label
-          >
-        </fieldset>
-        <label id="playlist-label" class="playlist-field" hidden
-          >Playlist ID
-          <input
-            name="playlist_id"
-            id="playlist-id"
-            placeholder="e.g. 37i9dQZF1DX..."
-            autocomplete="off"
-          />
-          <span class="hint"
-            >Use the ID after <code>playlist/</code> in its Spotify URL.</span
-          >
-        </label>
-        <button id="scan-button" class="button" type="submit">Run check</button>
-        <p
-          id="loading-message"
-          class="loading-message"
-          role="status"
-          aria-live="polite"
-          hidden
-        >
-          <span class="spinner" aria-hidden="true"></span>
-          <span id="loading-text">Starting Spotify check…</span>
-        </p>
-      </form>
-      <a class="logout" href="{{ url_for('logout') }}">Disconnect</a>
-      {% endif %}
-    </main>
-    <script>
-      const playlist = document.querySelector('input[value="playlist"]');
-      const field = document.querySelector("#playlist-label");
-      const input = document.querySelector("#playlist-id");
-      function updatePlaylistField() {
-        const enabled = playlist && playlist.checked;
-        field.hidden = !enabled;
-        input.required = enabled;
-      }
-      if (playlist) {
-        document
-          .querySelectorAll('input[name="source"]')
-          .forEach((radio) =>
-            radio.addEventListener("change", updatePlaylistField),
-          );
-        updatePlaylistField();
-      }
+  const scanForm = document.querySelector("#scan-form");
+  const scanButton = document.querySelector("#scan-button");
+  const loadingMessage = document.querySelector("#loading-message");
 
-      const scanForm = document.querySelector("#scan-form");
-      const scanButton = document.querySelector("#scan-button");
-      const loadingMessage = document.querySelector("#loading-message");
+  if (scanForm) {
+    scanButton.disabled = false;
+    loadingMessage.hidden = true;
 
-      if (scanForm) {
-        scanButton.disabled = false;
-        loadingMessage.hidden = true;
-
-        scanForm.addEventListener("submit", async (event) => {
-          event.preventDefault();
-          scanButton.disabled = true;
-          loadingMessage.hidden = false;
-          try {
-            const response = await fetch(scanForm.action, {
-              method: "POST",
-              body: new FormData(scanForm),
-            });
-            const job = await response.json();
-            if (!response.ok) {
-              throw new Error(job.message || "Could not start the check.");
-            }
-            const poll = async () => {
-              const statusResponse = await fetch(`/scan-status/${job.job_id}`);
-              const status = await statusResponse.json();
-              if (!statusResponse.ok || status.status === "error") {
-                throw new Error(status.message || "The check failed.");
-              }
-              document.querySelector("#loading-text").textContent =
-                status.message;
-              if (status.status === "complete") {
-                window.location.href = `/scan-results/${job.job_id}`;
-                return;
-              }
-              window.setTimeout(poll, 500);
-            };
-            await poll();
-          } catch (error) {
-            loadingMessage.hidden = true;
-            scanButton.disabled = false;
-            const message = document.createElement("p");
-            message.className = "message error";
-            message.textContent = error.message;
-            scanForm.before(message);
+    scanForm.addEventListener("submit", async (event) => {
+      event.preventDefault();
+      scanButton.disabled = true;
+      loadingMessage.hidden = false;
+      try {
+        const response = await fetch(scanForm.action, {
+          method: "POST",
+          body: new FormData(scanForm),
+        });
+        const job = await response.json();
+        if (!response.ok) {
+          throw new Error(job.message || "Could not start the check.");
+        }
+        const poll = async () => {
+          const statusResponse = await fetch(`/scan-status/${job.job_id}`);
+          const status = await statusResponse.json();
+          if (!statusResponse.ok || status.status === "error") {
+            throw new Error(status.message || "The check failed.");
           }
-        });
-
-        window.addEventListener("pageshow", () => {
-          scanButton.disabled = false;
-          loadingMessage.hidden = true;
-        });
+          document.querySelector("#loading-text").textContent = status.message;
+          if (status.status === "complete") {
+            window.location.href = `/scan-results/${job.job_id}`;
+            return;
+          }
+          window.setTimeout(poll, 500);
+        };
+        await poll();
+      } catch (error) {
+        loadingMessage.hidden = true;
+        scanButton.disabled = false;
+        const message = document.createElement("p");
+        message.className = "message error";
+        message.textContent = error.message;
+        scanForm.before(message);
       }
-    </script>
+    });
+
+    window.addEventListener("pageshow", () => {
+      scanButton.disabled = false;
+      loadingMessage.hidden = true;
+    });
+  }
+</script>
 {% endblock %}
