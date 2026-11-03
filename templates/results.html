@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Duplicate results</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+  <main class="card wide">
+    <a class="back" href="{{ url_for('index') }}">← New scan</a>
+    <p class="eyebrow">{{ source_name }}</p>
+    {% if missing is defined %}
+      <h1>Missing from playlists</h1>
+      <p class="intro">{{ missing|length }} of {{ track_count }} liked songs are not in any of your {{ playlist_count }} playlists.</p>
+      {% if missing %}
+        <div class="results">
+        {% for track in missing %}
+          <section class="duplicate">
+            <h2>{{ track.name }}</h2>
+            <p class="artist">{{ track.artist }} · {{ track.album }}</p>
+            {% if track.url %}<a href="{{ track.url }}" target="_blank" rel="noreferrer">Open in Spotify</a>{% endif %}
+          </section>
+        {% endfor %}
+        </div>
+      {% else %}
+        <div class="empty"><strong>Everything is filed.</strong><br>Every liked song matched a song in at least one playlist.</div>
+      {% endif %}
+    {% else %}
+    <h1>Duplicate songs</h1>
+    <p class="intro">{{ track_count }} songs checked · {{ duplicates|length }} duplicate group{% if duplicates|length != 1 %}s{% endif %} found</p>
+    {% if duplicates %}
+      <div class="results">
+      {% for group in duplicates %}
+        <section class="duplicate">
+          <h2>{{ group[0].name }} <span>{{ group|length }} matches</span></h2>
+          <p class="artist">{{ group[0].artist }}</p>
+          <ul>
+          {% for track in group %}
+            <li>
+              <span>{{ track.name }} <small>{{ track.album }}</small></span>
+              {% if track.url %}<a href="{{ track.url }}" target="_blank" rel="noreferrer">Open</a>{% endif %}
+            </li>
+          {% endfor %}
+          </ul>
+        </section>
+      {% endfor %}
+      </div>
+    {% else %}
+      <div class="empty"><strong>No duplicates found.</strong><br>Every song had a unique title for its artist.</div>
+    {% endif %}
+    {% endif %}
+  </main>
+</body>
+</html>

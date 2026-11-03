@@ -1,0 +1,111 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Spotify Duplicate Finder</title>
+    <link
+      rel="stylesheet"
+      href="{{ url_for('static', filename='style.css') }}"
+    />
+  </head>
+  <body>
+    <main class="card">
+      <p class="eyebrow">Spotify tools</p>
+      <h1>Spotify song checker</h1>
+      <p class="intro">
+        Find the same song across remasters, editions, mixes, and other
+        releases.
+      </p>
+      {% with messages = get_flashed_messages(with_categories=true) %} {% for
+      category, message in messages %}
+      <p class="message {{ category }}">{{ message }}</p>
+      {% endfor %} {% endwith %} {% if not logged_in %}
+      <a class="button" href="{{ url_for('login') }}">Connect Spotify</a>
+      <p class="hint">
+        Your credentials stay on this server and are loaded from
+        <code>.env</code>.
+      </p>
+      {% else %}
+      <form id="scan-form" method="post" action="{{ url_for('scan') }}">
+        <fieldset>
+          <legend>What should I check?</legend>
+          <label class="choice"
+            ><input type="radio" name="source" value="liked" checked /> Liked
+            songs</label
+          >
+          <label class="choice"
+            ><input type="radio" name="source" value="playlist" /> A specific
+            playlist</label
+          >
+          <label class="choice"
+            ><input type="radio" name="source" value="all_playlists" /> Liked
+            songs missing from all playlists</label
+          >
+        </fieldset>
+        <label id="playlist-label" class="playlist-field"
+          >Playlist ID
+          <input
+            name="playlist_id"
+            id="playlist-id"
+            placeholder="e.g. 37i9dQZF1DX..."
+            autocomplete="off"
+          />
+          <span class="hint"
+            >Use the ID after <code>playlist/</code> in its Spotify URL.</span
+          >
+        </label>
+        <button id="scan-button" class="button" type="submit">Run check</button>
+        <p
+          id="loading-message"
+          class="loading-message"
+          role="status"
+          aria-live="polite"
+          hidden
+        >
+          <span class="spinner" aria-hidden="true"></span> Checking Spotify.
+          This may take a moment…
+        </p>
+      </form>
+      <a class="logout" href="{{ url_for('logout') }}">Disconnect</a>
+      {% endif %}
+    </main>
+    <script>
+      const playlist = document.querySelector('input[value="playlist"]');
+      const field = document.querySelector("#playlist-label");
+      const input = document.querySelector("#playlist-id");
+      function updatePlaylistField() {
+        const enabled = playlist && playlist.checked;
+        field.hidden = !enabled;
+        input.required = enabled;
+      }
+      if (playlist) {
+        document
+          .querySelectorAll('input[name="source"]')
+          .forEach((radio) =>
+            radio.addEventListener("change", updatePlaylistField),
+          );
+        updatePlaylistField();
+      }
+
+      const scanForm = document.querySelector("#scan-form");
+      const scanButton = document.querySelector("#scan-button");
+      const loadingMessage = document.querySelector("#loading-message");
+
+      if (scanForm) {
+        scanButton.disabled = false;
+        loadingMessage.hidden = true;
+
+        scanForm.addEventListener("submit", () => {
+          scanButton.disabled = true;
+          loadingMessage.hidden = false;
+        });
+
+        window.addEventListener("pageshow", () => {
+          scanButton.disabled = false;
+          loadingMessage.hidden = true;
+        });
+      }
+    </script>
+  </body>
+</html>
