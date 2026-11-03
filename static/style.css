@@ -8,6 +8,7 @@ h1 { margin: 8px 0 10px; font-size: clamp(2rem, 6vw, 3.2rem); line-height: 1.05;
 .button { display: inline-block; border: 0; border-radius: 999px; background: #55d66c; color: #09100a; cursor: pointer; font: inherit; font-weight: 700; padding: 13px 22px; text-decoration: none; }
 .button:disabled { cursor: wait; opacity: .65; }
 .loading-message { display: flex; align-items: center; gap: 9px; color: #c5f3ca; margin: 18px 0 0; }
+.loading-message[hidden] { display: none; }
 .spinner { width: 15px; height: 15px; border: 2px solid #49634d; border-top-color: #55d66c; border-radius: 50%; animation: spin .8s linear infinite; }
 @keyframes spin { to { transform: rotate(360deg); } }
 .hint, small { color: #849084; font-size: .85rem; }

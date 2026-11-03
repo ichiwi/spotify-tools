@@ -1,13 +1,14 @@
 import os
 import re
 import secrets
+import threading
 import time
 from functools import wraps
 from urllib.parse import urlencode
 
 import requests
 from dotenv import load_dotenv
-from flask import Flask, flash, redirect, render_template, request, session, url_for
+from flask import Flask, flash, jsonify, redirect, render_template, request, session, url_for
 
 load_dotenv()
 
@@ -17,6 +18,8 @@ app.secret_key = os.environ.get("FLASK_SECRET_KEY", secrets.token_hex(32))
 SPOTIFY_ACCOUNTS_URL = "https://accounts.spotify.com"
 SPOTIFY_API_URL = "https://api.spotify.com/v1"
 OAUTH_SCOPES = "user-library-read playlist-read-private playlist-read-collaborative"
+SCAN_JOBS = {}
+SCAN_JOBS_LOCK = threading.Lock()
 
 
 def spotify_configured():
@@ -33,7 +36,7 @@ def login_required(view):
     return wrapped
 
 
-def spotify_request(path_or_url, method="GET", **kwargs):
+def spotify_request(path_or_url, method="GET", access_token=None, **kwargs):
     url = path_or_url if path_or_url.startswith("http") else f"{SPOTIFY_API_URL}{path_or_url}"
     headers = kwargs.pop("headers", {})
     headers["Authorization"] = f"Bearer {session['access_token']}"
@@ -69,13 +72,43 @@ def spotify_request(path_or_url, method="GET", **kwargs):
     return response.json()
 
 
-def fetch_all_pages(path):
+def spotify_request(path_or_url, method="GET", access_token=None, **kwargs):
+    url = path_or_url if path_or_url.startswith("http") else f"{SPOTIFY_API_URL}{path_or_url}"
+    headers = kwargs.pop("headers", {})
+    headers["Authorization"] = f"Bearer {access_token or session['access_token']}"
+    last_error = None
+    for attempt in range(2):
+        try:
+            response = requests.request(method, url, headers=headers, timeout=(10, 30), **kwargs)
+            break
+        except requests.RequestException as error:
+            last_error = error
+            if attempt == 0:
+                time.sleep(1)
+    else:
+        raise RuntimeError(
+            "Spotify could not be reached. Check your internet connection and try again."
+        ) from last_error
+    if response.status_code == 401:
+        raise RuntimeError("Your Spotify session expired. Please sign in again.")
+    if not response.ok:
+        try:
+            message = response.json().get("error", {}).get("message", response.text)
+        except ValueError:
+            message = response.text
+        raise RuntimeError(f"Spotify returned an error: {message}")
+    return response.json()
+
+
+def fetch_all_pages(path, access_token=None, progress=None):
     items = []
     next_url = path
     while next_url:
-        page = spotify_request(next_url)
+        page = spotify_request(next_url, access_token=access_token)
         items.extend(page.get("items", []))
         next_url = page.get("next")
+        if progress:
+            progress(len(items))
     return items
 
 
@@ -212,57 +245,110 @@ def logout():
 def scan():
     source = request.form.get("source")
     playlist_id = request.form.get("playlist_id", "").strip()
-    if source == "all_playlists":
-        try:
-            liked_tracks = [
-                track
-                for item in fetch_all_pages("/me/tracks?limit=50")
-                if (track := track_from_item(item))
-            ]
-            playlists = fetch_all_pages("/me/playlists?limit=50")
+    if source not in {"liked", "playlist", "all_playlists"}:
+        flash("Choose liked songs or enter a playlist ID.", "error")
+        return redirect(url_for("index"))
+    if source == "playlist" and not re.fullmatch(r"[A-Za-z0-9]+", playlist_id):
+        flash("Choose a valid playlist ID.", "error")
+        return redirect(url_for("index"))
+    job_id = secrets.token_urlsafe(18)
+    with SCAN_JOBS_LOCK:
+        SCAN_JOBS[job_id] = {
+            "status": "running",
+            "message": "Starting Spotify check…",
+            "access_token": session["access_token"],
+        }
+    threading.Thread(
+        target=run_scan,
+        args=(job_id, source, playlist_id, session["access_token"]),
+        daemon=True,
+    ).start()
+    return jsonify({"job_id": job_id})
+
+
+def update_scan(job_id, message):
+    with SCAN_JOBS_LOCK:
+        if job_id in SCAN_JOBS:
+            SCAN_JOBS[job_id]["message"] = message
+
+
+def run_scan(job_id, source, playlist_id, access_token):
+    try:
+        if source == "all_playlists":
+            update_scan(job_id, "Loading liked songs…")
+            liked_items = fetch_all_pages(
+                "/me/tracks?limit=50",
+                access_token,
+                lambda count: update_scan(job_id, f"Loading liked songs ({count} loaded)…"),
+            )
+            liked_tracks = [track for item in liked_items if (track := track_from_item(item))]
+            update_scan(job_id, "Loading your playlists…")
+            playlists = fetch_all_pages("/me/playlists?limit=50", access_token)
             playlist_tracks = []
-            for playlist in playlists:
+            total = len(playlists)
+            for index, playlist in enumerate(playlists, 1):
+                update_scan(job_id, f"Checking playlist {index} of {total}: {playlist.get('name', 'Untitled')}")
                 playlist_tracks.extend(
                     track
                     for item in fetch_all_pages(
-                        f"/playlists/{playlist['id']}/items?limit=50"
+                        f"/playlists/{playlist['id']}/items?limit=50",
+                        access_token,
                     )
                     if (track := track_from_item(item))
                 )
-            missing = find_unfiled_tracks(liked_tracks, playlist_tracks)
-        except (KeyError, RuntimeError) as error:
-            flash(str(error), "error")
+            update_scan(job_id, "Comparing liked songs with playlist tracks…")
+            result = {
+                "missing": find_unfiled_tracks(liked_tracks, playlist_tracks),
+                "playlist_count": total,
+                "source_name": "Liked songs not in your playlists",
+                "track_count": len(liked_tracks),
+            }
+        else:
+            endpoint = "/me/tracks?limit=50"
+            source_name = "Liked songs"
+            if source == "playlist":
+                endpoint = f"/playlists/{playlist_id}/items?limit=50&fields=items(track(name,artists,album,external_urls,type)),next"
+                source_name = f"Playlist {playlist_id}"
+            update_scan(job_id, "Loading songs from Spotify…")
+            items = fetch_all_pages(
+                endpoint,
+                access_token,
+                lambda count: update_scan(job_id, f"Loading songs ({count} loaded)…"),
+            )
+            tracks = [track for item in items if (track := track_from_item(item))]
+            update_scan(job_id, "Comparing song titles and artists…")
+            result = {
+                "duplicates": find_duplicates(tracks),
+                "source_name": source_name,
+                "track_count": len(tracks),
+            }
+        with SCAN_JOBS_LOCK:
+            SCAN_JOBS[job_id].update(status="complete", message="Check complete.", result=result)
+    except (KeyError, RuntimeError) as error:
+        with SCAN_JOBS_LOCK:
+            SCAN_JOBS[job_id].update(status="error", message=str(error))
+
+
+@app.route("/scan-status/<job_id>")
+@login_required
+def scan_status(job_id):
+    with SCAN_JOBS_LOCK:
+        job = SCAN_JOBS.get(job_id)
+        if not job or job["access_token"] != session["access_token"]:
+            return jsonify({"status": "error", "message": "Scan not found."}), 404
+        return jsonify({"status": job["status"], "message": job["message"]})
+
+
+@app.route("/scan-results/<job_id>")
+@login_required
+def scan_results(job_id):
+    with SCAN_JOBS_LOCK:
+        job = SCAN_JOBS.get(job_id)
+        if not job or job["access_token"] != session["access_token"] or job["status"] != "complete":
+            flash("That scan is no longer available.", "error")
             return redirect(url_for("index"))
-        return render_template(
-            "results.html",
-            missing=missing,
-            playlist_count=len(playlists),
-            source_name="Liked songs not in your playlists",
-            track_count=len(liked_tracks),
-            logged_in=True,
-        )
-    if source == "liked":
-        endpoint = "/me/tracks?limit=50"
-        source_name = "Liked songs"
-    elif source == "playlist" and re.fullmatch(r"[A-Za-z0-9]+", playlist_id):
-        endpoint = f"/playlists/{playlist_id}/items?limit=50&fields=items(track(name,artists,album,external_urls,type)),next"
-        source_name = f"Playlist {playlist_id}"
-    else:
-        flash("Choose liked songs or enter a playlist ID.", "error")
-        return redirect(url_for("index"))
-    try:
-        tracks = [track for item in fetch_all_pages(endpoint) if (track := track_from_item(item))]
-        duplicates = find_duplicates(tracks)
-    except RuntimeError as error:
-        flash(str(error), "error")
-        return redirect(url_for("index"))
-    return render_template(
-        "results.html",
-        duplicates=duplicates,
-        source_name=source_name,
-        track_count=len(tracks),
-        logged_in=True,
-    )
+        result = job["result"]
+    return render_template("results.html", logged_in=True, **result)
 
 
 if __name__ == "__main__":

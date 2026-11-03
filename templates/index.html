@@ -63,8 +63,8 @@
           aria-live="polite"
           hidden
         >
-          <span class="spinner" aria-hidden="true"></span> Checking Spotify.
-          This may take a moment…
+          <span class="spinner" aria-hidden="true"></span>
+          <span id="loading-text">Starting Spotify check…</span>
         </p>
       </form>
       <a class="logout" href="{{ url_for('logout') }}">Disconnect</a>
@@ -96,9 +96,41 @@
         scanButton.disabled = false;
         loadingMessage.hidden = true;
 
-        scanForm.addEventListener("submit", () => {
+        scanForm.addEventListener("submit", async (event) => {
+          event.preventDefault();
           scanButton.disabled = true;
           loadingMessage.hidden = false;
+          try {
+            const response = await fetch(scanForm.action, {
+              method: "POST",
+              body: new FormData(scanForm),
+            });
+            const job = await response.json();
+            if (!response.ok) {
+              throw new Error(job.message || "Could not start the check.");
+            }
+            const poll = async () => {
+              const statusResponse = await fetch(`/scan-status/${job.job_id}`);
+              const status = await statusResponse.json();
+              if (!statusResponse.ok || status.status === "error") {
+                throw new Error(status.message || "The check failed.");
+              }
+              document.querySelector("#loading-text").textContent = status.message;
+              if (status.status === "complete") {
+                window.location.href = `/scan-results/${job.job_id}`;
+                return;
+              }
+              window.setTimeout(poll, 500);
+            };
+            await poll();
+          } catch (error) {
+            loadingMessage.hidden = true;
+            scanButton.disabled = false;
+            const message = document.createElement("p");
+            message.className = "message error";
+            message.textContent = error.message;
+            scanForm.before(message);
+          }
         });
 
         window.addEventListener("pageshow", () => {
