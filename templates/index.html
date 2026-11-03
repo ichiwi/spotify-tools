@@ -25,7 +25,11 @@
       >
       <label class="choice"
         ><input type="radio" name="source" value="owned_repeated" /> Songs found
-        in multiple owned playlists</label
+        in more than one playlist</label
+      >
+      <label class="choice"
+        ><input type="radio" name="source" value="owned_unliked" /> Songs found
+        in playlists while not in liked songs</label
       >
       <label class="choice"
         ><input type="radio" name="source" value="liked" /> Duplicates across
@@ -38,10 +42,6 @@
       <label class="choice"
         ><input type="radio" name="source" value="playlist" /> Duplicates across
         a specific playlist</label
-      >
-      <label class="choice"
-        ><input type="radio" name="source" value="owned_unliked" /> Songs across
-        owned playlists not in liked songs</label
       >
     </fieldset>
     <label id="playlist-label" class="playlist-field" hidden
@@ -72,13 +72,13 @@
   {% endif %}
 </main>
 <script>
-  const playlistOptions = document.querySelectorAll(
-    'input[value="playlist"]',
-  );
+  const playlistOptions = document.querySelectorAll('input[value="playlist"]');
   const field = document.querySelector("#playlist-label");
   const input = document.querySelector("#playlist-id");
   function updatePlaylistField() {
-    const enabled = Array.from(playlistOptions).some((option) => option.checked);
+    const enabled = Array.from(playlistOptions).some(
+      (option) => option.checked,
+    );
     field.hidden = !enabled;
     input.required = enabled;
   }
