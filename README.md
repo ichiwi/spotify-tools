@@ -18,17 +18,17 @@ tracks by different artists are not.
    python -m venv .venv
    .venv\Scripts\activate
    pip install -r requirements.txt
-   python filter.py
+   python app.py
    ```
 
 4. Open `http://127.0.0.1:5000`.
 
-The source stylesheet is [static/style.scss](static/style.scss). Compile it to
+The source stylesheet is [static/scss/main.scss](static/scss/main.scss). Compile it to
 `static/css/style.css` with your installed Sass compiler after making style
 changes, for example:
 
 ```text
-sass static/style.scss static/css/style.css
+sass static/scss/main.scss static/css/style.css
 ```
 
 Generated CSS files are excluded from Git; compile the stylesheet locally

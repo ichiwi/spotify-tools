@@ -1,16 +1,8 @@
-<!doctype html>
-<html lang="en">
-  <head>
-    <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <link rel="icon" type="image/x-icon" href="/favicon.ico" />
-    <title>Duplicate results</title>
-    <link
-      rel="stylesheet"
-      href="{{ url_for('static', filename='css/style.css') }}"
-    />
-  </head>
-  <body>
+{% extends "base.html" %}
+
+{% block title %}Spotify Song Results{% endblock %}
+
+{% block content %}
     <main class="card wide">
       <a class="back" href="{{ url_for('index') }}">← New scan</a>
       <p class="eyebrow">{{ source_name }}</p>
@@ -75,5 +67,4 @@
       </div>
       {% endif %} {% endif %}
     </main>
-  </body>
-</html>
+{% endblock %}
