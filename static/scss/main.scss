@@ -1,3 +1,5 @@
+@use "sass:map";
+
 $colors: (
   background: #101210,
   surface: #1b1f1c,
@@ -14,7 +16,7 @@ $colors: (
 );
 
 @function color($name) {
-  @return map-get($colors, $name);
+  @return map.get($colors, $name);
 }
 
 :root {
@@ -160,7 +162,9 @@ input[type="radio"] {
     opacity: 0;
     pointer-events: none;
     transform: translate(-50%, 4px);
-    transition: opacity 0.15s ease, transform 0.15s ease;
+    transition:
+      opacity 0.15s ease,
+      transform 0.15s ease;
   }
 
   &:hover &-text,
