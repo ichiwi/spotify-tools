@@ -19,30 +19,54 @@
   <form id="scan-form" method="post" action="{{ url_for('scan') }}">
     <fieldset>
       <legend>What should I check?</legend>
-      <label class="choice"
-        ><input type="radio" name="source" value="all_playlists" checked />
-        Uncategorized liked songs</label
-      >
-      <label class="choice"
-        ><input type="radio" name="source" value="owned_repeated" /> Songs found
-        in more than one playlist</label
-      >
-      <label class="choice"
-        ><input type="radio" name="source" value="owned_unliked" /> Songs found
-        in playlists while not in liked songs</label
-      >
-      <label class="choice"
-        ><input type="radio" name="source" value="liked" /> Duplicates across
-        all liked songs</label
-      >
-      <label class="choice"
-        ><input type="radio" name="source" value="owned_duplicates" />
-        Duplicates across all owned playlists</label
-      >
-      <label class="choice"
-        ><input type="radio" name="source" value="playlist" /> Duplicates across
-        a specific playlist</label
-      >
+      <label class="choice">
+        <input type="radio" name="source" value="all_playlists" checked />
+        Uncategorized liked songs
+        <span class="tooltip">
+          <span class="tooltip-trigger" tabindex="0" role="button" aria-describedby="tooltip-all-playlists">?</span>
+          <span class="tooltip-text" id="tooltip-all-playlists" role="tooltip">Finds songs you have liked on Spotify that do not appear in any of your owned playlists. This is useful for finding liked tracks that still need to be organized.</span>
+        </span>
+      </label>
+      <label class="choice">
+        <input type="radio" name="source" value="owned_repeated" />
+        Songs found in more than one playlist
+        <span class="tooltip">
+          <span class="tooltip-trigger" tabindex="0" role="button" aria-describedby="tooltip-owned-repeated">?</span>
+          <span class="tooltip-text" id="tooltip-owned-repeated" role="tooltip">Finds songs that appear in two or more of your owned playlists. Use this to identify repeated tracks and decide whether to remove duplicates from some playlists.</span>
+        </span>
+      </label>
+      <label class="choice">
+        <input type="radio" name="source" value="owned_unliked" />
+        Songs found in playlists while not in liked songs
+        <span class="tooltip">
+          <span class="tooltip-trigger" tabindex="0" role="button" aria-describedby="tooltip-owned-unliked">?</span>
+          <span class="tooltip-text" id="tooltip-owned-unliked" role="tooltip">Finds songs in your owned playlists that are not in your Spotify liked songs. This highlights playlist tracks you have not explicitly saved to your library.</span>
+        </span>
+      </label>
+      <label class="choice">
+        <input type="radio" name="source" value="liked" />
+        Duplicates across all liked songs
+        <span class="tooltip">
+          <span class="tooltip-trigger" tabindex="0" role="button" aria-describedby="tooltip-liked">?</span>
+          <span class="tooltip-text" id="tooltip-liked" role="tooltip">Groups liked songs that appear to be the same recording, including tracks listed on different releases. It helps you find repeated versions in your liked songs.</span>
+        </span>
+      </label>
+      <label class="choice">
+        <input type="radio" name="source" value="owned_duplicates" />
+        Duplicates across all owned playlists
+        <span class="tooltip">
+          <span class="tooltip-trigger" tabindex="0" role="button" aria-describedby="tooltip-owned-duplicates">?</span>
+          <span class="tooltip-text" id="tooltip-owned-duplicates" role="tooltip">Groups duplicate recordings found anywhere in your owned playlists. Unlike the repeated-playlist check, this focuses on duplicate tracks across playlists rather than simply listing every track shared by multiple playlists.</span>
+        </span>
+      </label>
+      <label class="choice">
+        <input type="radio" name="source" value="playlist" />
+        Duplicates across a specific playlist
+        <span class="tooltip">
+          <span class="tooltip-trigger" tabindex="0" role="button" aria-describedby="tooltip-playlist">?</span>
+          <span class="tooltip-text" id="tooltip-playlist" role="tooltip">Checks only the playlist whose Spotify ID you provide below. Use this when you want to find repeated recordings within one playlist instead of scanning your entire library.</span>
+        </span>
+      </label>
     </fieldset>
     <label id="playlist-label" class="playlist-field" hidden
       >Playlist ID
