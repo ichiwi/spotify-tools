@@ -1,127 +1,121 @@
-{% extends "base.html" %}
-
-{% block title %}Spotify Song Results{% endblock %}
-
-{% block content %}
-    <main class="card wide">
-      <a class="back" href="{{ url_for('index') }}">← New scan</a>
-      <p class="eyebrow">{{ source_name }}</p>
-      {% if unliked is defined %}
-      <h1>Owned playlist songs not in liked songs</h1>
-      <p class="intro">
-        {{ unliked|length }} of {{ track_count }} songs across your {{
-        playlist_count }} owned playlists are not in your liked songs.
-      </p>
-      {% if unliked %}
-      <div class="results">
-        {% for track in unliked %}
-        <section class="duplicate">
-          <h2>{{ track.track.name }}</h2>
-          <p class="artist">{{ track.track.artist }} · {{ track.track.album }}</p>
-          <p class="hint">Found in: {{ track.playlists|join(", ") }}</p>
-          {% if track.track.url %}<a
-            href="{{ track.track.url }}"
-            target="_blank"
-            rel="noreferrer"
-            >Open in Spotify</a
-          >{% endif %}
-        </section>
-        {% endfor %}
-      </div>
-      {% else %}
-      <div class="empty">
-        <strong>Everything is liked.</strong><br />Every song in your owned
-        playlists is also in your liked songs.
-      </div>
-      {% endif %}
-      {% elif repeated is defined %}
-      <h1>Songs repeated across playlists</h1>
-      <p class="intro">
-        {{ repeated|length }} songs appear in more than one of your owned
-        playlists.
-      </p>
-      {% if repeated %}
-      <div class="results">
-        {% for item in repeated %}
-        <section class="duplicate">
-          <h2>{{ item.track.name }}</h2>
-          <p class="artist">{{ item.track.artist }} · {{ item.track.album }}</p>
-          <p class="hint">Found in: {{ item.playlists|join(", ") }}</p>
-          {% if item.track.url %}<a
-            href="{{ item.track.url }}"
-            target="_blank"
-            rel="noreferrer"
-            >Open in Spotify</a
-          >{% endif %}
-        </section>
-        {% endfor %}
-      </div>
-      {% else %}
-      <div class="empty">
-        <strong>No repeated songs found.</strong><br />No song appears in more
-        than one owned playlist.
-      </div>
-      {% endif %}
-      {% elif missing is defined %}
-      <h1>Uncategorized liked songs</h1>
-      <p class="intro">
-        {{ missing|length }} of {{ track_count }} liked songs are not in any of
-        your {{ playlist_count }} personally owned playlists.
-      </p>
-      {% if missing %}
-      <div class="results">
-        {% for track in missing %}
-        <section class="duplicate">
-          <h2>{{ track.name }}</h2>
-          <p class="artist">{{ track.artist }} · {{ track.album }}</p>
+{% extends "base.html" %} {% block title %}Spotify Song Results{% endblock %} {%
+block content %}
+<main class="card wide">
+  <a class="back" href="{{ url_for('index') }}">← New scan</a>
+  <p class="eyebrow">{{ source_name }}</p>
+  {% if unliked is defined %}
+  <h1>Selected playlist songs not in liked songs</h1>
+  <p class="intro">
+    {{ unliked|length }} of {{ track_count }} songs across your {{
+    playlist_count }} selected playlists are not in your liked songs.
+  </p>
+  {% if unliked %}
+  <div class="results">
+    {% for track in unliked %}
+    <section class="duplicate">
+      <h2>{{ track.track.name }}</h2>
+      <p class="artist">{{ track.track.artist }} · {{ track.track.album }}</p>
+      <p class="hint">Found in: {{ track.playlists|join(", ") }}</p>
+      {% if track.track.url %}<a
+        href="{{ track.track.url }}"
+        target="_blank"
+        rel="noreferrer"
+        >Open in Spotify</a
+      >{% endif %}
+    </section>
+    {% endfor %}
+  </div>
+  {% else %}
+  <div class="empty">
+    <strong>Everything is liked.</strong><br />Every song in your owned
+    playlists is also in your liked songs.
+  </div>
+  {% endif %} {% elif repeated is defined %}
+  <h1>Songs repeated across playlists</h1>
+  <p class="intro">
+    {{ repeated|length }} songs appear in more than one of your selected
+    playlists.
+  </p>
+  {% if repeated %}
+  <div class="results">
+    {% for item in repeated %}
+    <section class="duplicate">
+      <h2>{{ item.track.name }}</h2>
+      <p class="artist">{{ item.track.artist }} · {{ item.track.album }}</p>
+      <p class="hint">Found in: {{ item.playlists|join(", ") }}</p>
+      {% if item.track.url %}<a
+        href="{{ item.track.url }}"
+        target="_blank"
+        rel="noreferrer"
+        >Open in Spotify</a
+      >{% endif %}
+    </section>
+    {% endfor %}
+  </div>
+  {% else %}
+  <div class="empty">
+    <strong>No repeated songs found.</strong><br />No song appears in more than
+    one selected playlist.
+  </div>
+  {% endif %} {% elif missing is defined %}
+  <h1>Uncategorized liked songs</h1>
+  <p class="intro">
+    {{ missing|length }} of {{ track_count }} liked songs are not in any of your
+    {{ playlist_count }} selected playlists.
+  </p>
+  {% if missing %}
+  <div class="results">
+    {% for track in missing %}
+    <section class="duplicate">
+      <h2>{{ track.name }}</h2>
+      <p class="artist">{{ track.artist }} · {{ track.album }}</p>
+      {% if track.url %}<a
+        href="{{ track.url }}"
+        target="_blank"
+        rel="noreferrer"
+        >Open in Spotify</a
+      >{% endif %}
+    </section>
+    {% endfor %}
+  </div>
+  {% else %}
+  <div class="empty">
+    <strong>Everything is filed.</strong><br />Every liked song matched a song
+    in at least one selected playlist.
+  </div>
+  {% endif %} {% else %}
+  <h1>Duplicate songs</h1>
+  <p class="intro">
+    {{ track_count }} songs checked · {{ duplicates|length }} duplicate group{%
+    if duplicates|length != 1 %}s{% endif %} found
+  </p>
+  {% if duplicates %}
+  <div class="results">
+    {% for group in duplicates %}
+    <section class="duplicate">
+      <h2>{{ group[0].name }} <span>{{ group|length }} matches</span></h2>
+      <p class="artist">{{ group[0].artist }}</p>
+      <ul>
+        {% for track in group %}
+        <li>
+          <span>{{ track.name }} <small>{{ track.album }}</small></span>
           {% if track.url %}<a
             href="{{ track.url }}"
             target="_blank"
             rel="noreferrer"
-            >Open in Spotify</a
+            >Open</a
           >{% endif %}
-        </section>
+        </li>
         {% endfor %}
-      </div>
-      {% else %}
-      <div class="empty">
-        <strong>Everything is filed.</strong><br />Every liked song matched a
-        song in at least one playlist.
-      </div>
-      {% endif %} {% else %}
-      <h1>Duplicate songs</h1>
-      <p class="intro">
-        {{ track_count }} songs checked · {{ duplicates|length }} duplicate
-        group{% if duplicates|length != 1 %}s{% endif %} found
-      </p>
-      {% if duplicates %}
-      <div class="results">
-        {% for group in duplicates %}
-        <section class="duplicate">
-          <h2>{{ group[0].name }} <span>{{ group|length }} matches</span></h2>
-          <p class="artist">{{ group[0].artist }}</p>
-          <ul>
-            {% for track in group %}
-            <li>
-              <span>{{ track.name }} <small>{{ track.album }}</small></span>
-              {% if track.url %}<a
-                href="{{ track.url }}"
-                target="_blank"
-                rel="noreferrer"
-                >Open</a
-              >{% endif %}
-            </li>
-            {% endfor %}
-          </ul>
-        </section>
-        {% endfor %}
-      </div>
-      {% else %}
-      <div class="empty">
-        <strong>No duplicates found.</strong><br />Every song had a unique title
-        for its artist.
-      </div>
-      {% endif %}
-      {% endif %}
-    </main>
+      </ul>
+    </section>
+    {% endfor %}
+  </div>
+  {% else %}
+  <div class="empty">
+    <strong>No duplicates found.</strong><br />Every song had a unique title for
+    its artist.
+  </div>
+  {% endif %} {% endif %}
+</main>
 {% endblock %}

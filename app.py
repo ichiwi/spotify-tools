@@ -218,7 +218,36 @@ def find_repeated_playlist_songs(playlist_tracks):
 
 @app.route("/")
 def index():
-    return render_template("index.html", logged_in="access_token" in session)
+    logged_in = "access_token" in session
+    playlists = []
+    if logged_in:
+        try:
+            all_playlists = fetch_all_pages(
+                "/me/playlists?limit=50",
+                access_token=session["access_token"],
+            )
+            playlists = [
+                {
+                    "id": playlist["id"],
+                    "name": playlist.get("name") or "Untitled playlist",
+                    "cover": (
+                        playlist.get("images") or [{}])[0].get("url", "")
+                        if playlist.get("images")
+                        else "",
+                    "track_count": (playlist.get("tracks") or {}).get("total", 0),
+                }
+                for playlist in all_playlists
+                if playlist.get("id")
+            ]
+        except RuntimeError:
+            session.clear()
+            flash("Your Spotify session expired. Please sign in again.", "error")
+            logged_in = False
+    return render_template(
+        "index.html",
+        logged_in=logged_in,
+        playlists=playlists,
+    )
 
 
 @app.route("/login")
@@ -280,7 +309,11 @@ def logout():
 @login_required
 def scan():
     source = request.form.get("source")
-    playlist_id = request.form.get("playlist_id", "").strip()
+    playlist_ids = [
+        value.strip()
+        for value in request.form.getlist("playlist_ids")
+        if value.strip()
+    ]
     if source not in {
         "liked",
         "playlist",
@@ -289,13 +322,11 @@ def scan():
         "owned_repeated",
         "owned_unliked",
     }:
-        flash("Choose liked songs or enter a playlist ID.", "error")
-        return redirect(url_for("index"))
-    if source == "playlist" and not re.fullmatch(
-        r"[A-Za-z0-9]+", playlist_id
-    ):
-        flash("Choose a valid playlist ID.", "error")
-        return redirect(url_for("index"))
+        return jsonify({"message": "Choose liked songs or select playlists."}), 400
+    if source in {"playlist", "owned_duplicates", "owned_repeated", "owned_unliked", "all_playlists"} and not playlist_ids:
+        return jsonify({"message": "Choose at least one playlist."}), 400
+    if any(not re.fullmatch(r"[A-Za-z0-9]+", value) for value in playlist_ids):
+        return jsonify({"message": "Choose valid playlists."}), 400
     job_id = secrets.token_urlsafe(18)
     with SCAN_JOBS_LOCK:
         SCAN_JOBS[job_id] = {
@@ -305,7 +336,7 @@ def scan():
         }
     threading.Thread(
         target=run_scan,
-        args=(job_id, source, playlist_id, session["access_token"]),
+        args=(job_id, source, playlist_ids, session["access_token"]),
         daemon=True,
     ).start()
     return jsonify({"job_id": job_id})
@@ -317,7 +348,7 @@ def update_scan(job_id, message):
             SCAN_JOBS[job_id]["message"] = message
 
 
-def run_scan(job_id, source, playlist_id, access_token):
+def run_scan(job_id, source, playlist_ids, access_token):
     try:
         if source in {
             "all_playlists",
@@ -325,16 +356,19 @@ def run_scan(job_id, source, playlist_id, access_token):
             "owned_repeated",
             "owned_unliked",
         }:
-            update_scan(job_id, "Loading your Spotify profile…")
-            user = spotify_request("/me", access_token=access_token)
             update_scan(job_id, "Loading your playlists…")
             all_playlists = fetch_all_pages("/me/playlists?limit=50", access_token)
-            playlists = [
-                playlist
+            playlists_by_id = {
+                playlist["id"]: playlist
                 for playlist in all_playlists
-                if (playlist.get("owner") or {}).get("id") == user.get("id")
+                if playlist.get("id")
+            }
+            playlists = [
+                playlists_by_id[playlist_id]
+                for playlist_id in playlist_ids
+                if playlist_id in playlists_by_id
             ]
-            update_scan(job_id, f"Found {len(playlists)} playlists owned by you.")
+            update_scan(job_id, f"Found {len(playlists)} selected playlists.")
             playlist_tracks = []
             playlist_track_entries = []
             total = len(playlists)
@@ -356,13 +390,13 @@ def run_scan(job_id, source, playlist_id, access_token):
             if source == "owned_duplicates":
                 result = {
                     "duplicates": find_duplicates(playlist_tracks),
-                    "source_name": "Duplicates across your owned playlists",
+                    "source_name": "Duplicates across selected playlists",
                     "track_count": len(playlist_tracks),
                 }
             elif source == "owned_repeated":
                 result = {
                     "repeated": find_repeated_playlist_songs(playlist_track_entries),
-                    "source_name": "Songs repeated across your owned playlists",
+                    "source_name": "Songs repeated across selected playlists",
                     "track_count": len(playlist_tracks),
                 }
             elif source == "owned_unliked":
@@ -400,15 +434,24 @@ def run_scan(job_id, source, playlist_id, access_token):
             endpoint = "/me/tracks?limit=50"
             source_name = "Liked songs"
             if source == "playlist":
-                endpoint = f"/playlists/{playlist_id}/items?limit=50&fields=items(track(name,artists,album,external_urls,type)),next"
-                source_name = f"Playlist {playlist_id}"
-            update_scan(job_id, "Loading songs from Spotify…")
-            items = fetch_all_pages(
-                endpoint,
-                access_token,
-                lambda count: update_scan(job_id, f"Loading songs ({count} loaded)…"),
-            )
-            tracks = [track for item in items if (track := track_from_item(item))]
+                tracks = []
+                for index, playlist_id in enumerate(playlist_ids, 1):
+                    update_scan(job_id, f"Loading selected playlist {index} of {len(playlist_ids)}…")
+                    items = fetch_all_pages(
+                        f"/playlists/{playlist_id}/items?limit=50",
+                        access_token,
+                        lambda count: update_scan(job_id, f"Loading playlist songs ({count} loaded)…"),
+                    )
+                    tracks.extend(track for item in items if (track := track_from_item(item)))
+                source_name = f"{len(playlist_ids)} selected playlist{'s' if len(playlist_ids) != 1 else ''}"
+            else:
+                update_scan(job_id, "Loading songs from Spotify…")
+                items = fetch_all_pages(
+                    endpoint,
+                    access_token,
+                    lambda count: update_scan(job_id, f"Loading songs ({count} loaded)…"),
+                )
+                tracks = [track for item in items if (track := track_from_item(item))]
             update_scan(job_id, "Comparing song titles and artists…")
             result = {
                 "duplicates": find_duplicates(tracks),
