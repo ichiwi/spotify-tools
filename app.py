@@ -216,16 +216,26 @@ def find_repeated_playlist_songs(playlist_tracks):
     ]
 
 
+def fetch_owned_playlists(access_token):
+    user = spotify_request("/me", access_token=access_token)
+    all_playlists = fetch_all_pages(
+        "/me/playlists?limit=50",
+        access_token=access_token,
+    )
+    return [
+        playlist
+        for playlist in all_playlists
+        if (playlist.get("owner") or {}).get("id") == user.get("id")
+    ]
+
+
 @app.route("/")
 def index():
     logged_in = "access_token" in session
     playlists = []
     if logged_in:
         try:
-            all_playlists = fetch_all_pages(
-                "/me/playlists?limit=50",
-                access_token=session["access_token"],
-            )
+            owned_playlists = fetch_owned_playlists(session["access_token"])
             playlists = [
                 {
                     "id": playlist["id"],
@@ -236,7 +246,7 @@ def index():
                         else "",
                     "track_count": (playlist.get("tracks") or {}).get("total", 0),
                 }
-                for playlist in all_playlists
+                for playlist in owned_playlists
                 if playlist.get("id")
             ]
         except RuntimeError:
@@ -357,10 +367,10 @@ def run_scan(job_id, source, playlist_ids, access_token):
             "owned_unliked",
         }:
             update_scan(job_id, "Loading your playlists…")
-            all_playlists = fetch_all_pages("/me/playlists?limit=50", access_token)
+            owned_playlists = fetch_owned_playlists(access_token)
             playlists_by_id = {
                 playlist["id"]: playlist
-                for playlist in all_playlists
+                for playlist in owned_playlists
                 if playlist.get("id")
             }
             playlists = [
@@ -435,7 +445,20 @@ def run_scan(job_id, source, playlist_ids, access_token):
             source_name = "Liked songs"
             if source == "playlist":
                 tracks = []
-                for index, playlist_id in enumerate(playlist_ids, 1):
+                owned_playlists = fetch_owned_playlists(access_token)
+                owned_ids = {
+                    playlist["id"]
+                    for playlist in owned_playlists
+                    if playlist.get("id")
+                }
+                selected_owned_ids = [
+                    playlist_id
+                    for playlist_id in playlist_ids
+                    if playlist_id in owned_ids
+                ]
+                if not selected_owned_ids:
+                    raise RuntimeError("Choose at least one playlist owned by you.")
+                for index, playlist_id in enumerate(selected_owned_ids, 1):
                     update_scan(job_id, f"Loading selected playlist {index} of {len(playlist_ids)}…")
                     items = fetch_all_pages(
                         f"/playlists/{playlist_id}/items?limit=50",
@@ -443,7 +466,7 @@ def run_scan(job_id, source, playlist_ids, access_token):
                         lambda count: update_scan(job_id, f"Loading playlist songs ({count} loaded)…"),
                     )
                     tracks.extend(track for item in items if (track := track_from_item(item)))
-                source_name = f"{len(playlist_ids)} selected playlist{'s' if len(playlist_ids) != 1 else ''}"
+                source_name = f"{len(selected_owned_ids)} selected playlist{'s' if len(selected_owned_ids) != 1 else ''}"
             else:
                 update_scan(job_id, "Loading songs from Spotify…")
                 items = fetch_all_pages(
