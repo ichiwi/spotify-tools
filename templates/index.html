@@ -57,10 +57,12 @@
     <section id="playlist-picker" class="playlist-picker" hidden>
       <div class="playlist-picker-heading">
         <div>
-          <h2>Select owned playlists</h2>
-          <p class="hint">Choose one or more playlists owned by you.</p>
+          <h2>Select playlists</h2>
+          <p class="hint">Choose one or more playlists to include.</p>
         </div>
-        <button type="button" id="select-all-playlists" class="text-button">Select all</button>
+        <button type="button" id="select-all-playlists" class="text-button">
+          Select all
+        </button>
       </div>
       {% if playlists %}
       <div class="playlist-grid">
@@ -84,7 +86,7 @@
         {% endfor %}
       </div>
       {% else %}
-      <p class="hint">No owned playlists were found for this Spotify account.</p>
+      <p class="hint">No playlists were found for this Spotify account.</p>
       {% endif %}
     </section>
     <input type="hidden" name="source" id="selected-source" value="liked" />
@@ -109,7 +111,9 @@
   const playlistOptions = document.querySelector("#playlist-options");
   const playlistPicker = document.querySelector("#playlist-picker");
   const selectedSource = document.querySelector("#selected-source");
-  const playlistInputs = document.querySelectorAll('input[name="playlist_ids"]');
+  const playlistInputs = document.querySelectorAll(
+    'input[name="playlist_ids"]',
+  );
   const selectAllButton = document.querySelector("#select-all-playlists");
 
   function updateScope() {
@@ -126,11 +130,13 @@
   scopeOptions.forEach((option) =>
     option.addEventListener("change", updateScope),
   );
-  document.querySelectorAll('input[name="playlist_source"]').forEach((option) =>
-    option.addEventListener("change", updateScope),
-  );
+  document
+    .querySelectorAll('input[name="playlist_source"]')
+    .forEach((option) => option.addEventListener("change", updateScope));
   selectAllButton?.addEventListener("click", () => {
-    const shouldSelect = Array.from(playlistInputs).some((input) => !input.checked);
+    const shouldSelect = Array.from(playlistInputs).some(
+      (input) => !input.checked,
+    );
     playlistInputs.forEach((input) => {
       input.checked = shouldSelect;
     });
